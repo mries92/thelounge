@@ -115,6 +115,7 @@ body {
 #chat button.mentions,
 #chat button.menu,
 #chat button.close,
+#form #gif-picker-button,
 #form #submit {
 	color: #b7c5d1;
 }

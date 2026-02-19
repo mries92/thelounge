@@ -23,10 +23,11 @@
 	position: absolute;
 	bottom: 70px;
 	right: 10px;
-	width: 300px;
-	height: 400px;
-	background: var(--body-bg-color);
-	border: 1px solid var(--window-border-color);
+	width: 675px;
+	height: 750px;
+	background: var(--window-bg-color);
+	color: var(--body-color);
+	border: 1px solid rgba(0, 0, 0, 0.2);
 	border-radius: 5px;
 	display: flex;
 	flex-direction: column;
@@ -36,25 +37,32 @@
 
 @media (max-width: 768px) {
 	#gif-picker {
-		width: calc(100% - 20px);
-		left: 10px;
-		right: 10px;
+		width: calc(100% - 10px);
+		height: 60vh;
+		left: 5px;
+		right: 5px;
 		bottom: 60px;
 	}
 }
 
 .gif-picker-header {
 	padding: 10px;
-	border-bottom: 1px solid var(--window-border-color);
+	border-bottom: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .gif-picker-header input {
 	width: 100%;
 	padding: 5px;
-	border: 1px solid var(--window-border-color);
+	border: 1px solid rgba(0, 0, 0, 0.2);
 	border-radius: 3px;
-	background: var(--input-bg-color);
+	background: rgba(0, 0, 0, 0.05);
 	color: var(--body-color);
+	outline: none;
+}
+
+.gif-picker-header input::placeholder {
+	color: var(--body-color-muted);
+	opacity: 0.8;
 }
 
 .gif-picker-content {
@@ -67,7 +75,7 @@
 }
 
 .gif-item {
-	width: 50%;
+	width: 33.33%;
 	padding: 2px;
 	cursor: pointer;
 }
@@ -76,12 +84,18 @@
 	width: 100%;
 	display: block;
 	border-radius: 3px;
+	transition: opacity 0.2s;
+}
+
+.gif-item:hover img {
+	opacity: 0.8;
 }
 
 .gif-loading {
 	width: 100%;
 	text-align: center;
 	padding: 10px;
+	color: var(--body-color-muted);
 }
 </style>
 
@@ -101,6 +115,7 @@ export default defineComponent({
 		const loading = ref(false);
 		const offset = ref(0);
 		const searchInput = ref<HTMLInputElement>();
+		const picker = ref<HTMLElement>();
 
 		const giphyApiKey = computed(() => store.state.serverConfiguration?.giphyApiKey);
 
@@ -176,14 +191,27 @@ export default defineComponent({
 			isOpen.value = false;
 		};
 
+		const onOutsideClick = (event: MouseEvent) => {
+			if (
+				isOpen.value &&
+				picker.value &&
+				!picker.value.contains(event.target as Node) &&
+				!(event.target as HTMLElement).closest("#gif-picker-button")
+			) {
+				close();
+			}
+		};
+
 		onMounted(() => {
 			eventbus.on("gif-picker:toggle", toggle);
 			eventbus.on("escapekey", close);
+			document.addEventListener("mousedown", onOutsideClick);
 		});
 
 		onUnmounted(() => {
 			eventbus.off("gif-picker:toggle", toggle);
 			eventbus.off("escapekey", close);
+			document.removeEventListener("mousedown", onOutsideClick);
 		});
 
 		return {
@@ -195,6 +223,7 @@ export default defineComponent({
 			onScroll,
 			selectGif,
 			searchInput,
+			picker,
 		};
 	},
 });
