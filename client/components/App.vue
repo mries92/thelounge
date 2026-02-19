@@ -12,6 +12,7 @@
 		<ImageViewer ref="imageViewer" />
 		<ContextMenu ref="contextMenu" />
 		<ConfirmDialog ref="confirmDialog" />
+		<GifPicker />
 		<div id="upload-overlay"></div>
 	</div>
 </template>
@@ -29,6 +30,7 @@ import ImageViewer from "./ImageViewer.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import Mentions from "./Mentions.vue";
+import GifPicker from "./GifPicker.vue";
 import {
 	computed,
 	provide,
@@ -54,6 +56,7 @@ export default defineComponent({
 		ContextMenu,
 		ConfirmDialog,
 		Mentions,
+		GifPicker,
 	},
 	setup() {
 		const store = useStore();

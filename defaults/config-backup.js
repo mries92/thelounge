@@ -519,4 +519,11 @@ module.exports = {
 	//
 	// This value is set to `""` by default.
 	giphyApiKey: "",
+
+	// ### `tenorApiKey`
+	//
+	// Set the API key for Tenor. If this is not set, the GIF picker will be disabled.
+	//
+	// This value is set to `""` by default.
+	tenorApiKey: "",
 };

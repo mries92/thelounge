@@ -112,6 +112,7 @@ export type ConfigType = {
 	ldap: Ldap;
 	debug: Debug;
 	themeColor: string;
+	giphyApiKey: string;
 };
 
 class Config {

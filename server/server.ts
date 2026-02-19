@@ -371,7 +371,7 @@ function addSecurityHeaders(_req: Request, res: Response, next: NextFunction) {
 		"default-src 'none'", // default to nothing
 		"base-uri 'none'", // disallow <base>, has no fallback to default-src
 		"form-action 'self'", // 'self' to fix saving passwords in Firefox, even though login is handled in javascript
-		"connect-src 'self' ws: wss:", // allow self for polling; websockets
+		"connect-src 'self' ws: wss: https://api.giphy.com", // allow self for polling; websockets; Giphy API
 		"style-src 'self' https: 'unsafe-inline'", // allow inline due to use in irc hex colors
 		"script-src 'self'", // javascript
 		"worker-src 'self'", // service worker
@@ -384,10 +384,10 @@ function addSecurityHeaders(_req: Request, res: Response, next: NextFunction) {
 	// - https://user-images.githubusercontent.com is where we currently push our changelog screenshots
 	// - data: is required for the HTML5 video player
 	if (Config.values.prefetchStorage || !Config.values.prefetch) {
-		policies.push("img-src 'self' data: https://user-images.githubusercontent.com");
+		policies.push("img-src 'self' data: https://user-images.githubusercontent.com https://*.giphy.com");
 		policies.unshift("block-all-mixed-content");
 	} else {
-		policies.push("img-src http: https: data:");
+		policies.push("img-src http: https: data: https://*.giphy.com");
 	}
 
 	res.setHeader("Content-Security-Policy", policies.join("; "));
@@ -873,6 +873,7 @@ function getClientConfiguration(): SharedConfiguration | LockedSharedConfigurati
 		useHexIp: Config.values.useHexIp,
 		prefetch: Config.values.prefetch,
 		fileUploadMaxFileSize: Uploader ? Uploader.getMaxFileSize() : undefined, // TODO can't be undefined?
+		giphyApiKey: Config.values.giphyApiKey,
 	};
 
 	const defaultsOverride = {

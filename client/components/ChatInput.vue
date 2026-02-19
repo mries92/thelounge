@@ -38,6 +38,20 @@
 			/>
 		</span>
 		<span
+			v-if="store.state.serverConfiguration?.giphyApiKey"
+			id="gif-picker-tooltip"
+			class="tooltipped tooltipped-w tooltipped-no-touch"
+			aria-label="Search GIFs"
+		>
+			<button
+				id="gif-picker-button"
+				type="button"
+				aria-label="Search GIFs"
+				:disabled="!store.state.isConnected"
+				@click="toggleGifPicker"
+			/>
+		</span>
+		<span
 			id="submit-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
 			aria-label="Send message"
@@ -208,6 +222,10 @@ export default defineComponent({
 			uploadInput.value?.click();
 		};
 
+		const toggleGifPicker = () => {
+			eventbus.emit("gif-picker:toggle");
+		};
+
 		const blurInput = () => {
 			input.value?.blur();
 		};
@@ -345,6 +363,7 @@ export default defineComponent({
 			uploadInput,
 			onUploadInputChange,
 			openFileUpload,
+			toggleGifPicker,
 			blurInput,
 			onBlur,
 			setInputSize,

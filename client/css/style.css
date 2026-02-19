@@ -300,6 +300,7 @@ p {
 #settings #play::before,
 #settings .settings-menu .icon::before,
 #form #upload::before,
+#form #gif-picker-button::before,
 #form #submit::before,
 #chat .msg[data-type="away"] .from::before,
 #chat .msg[data-type="back"] .from::before,
@@ -405,6 +406,7 @@ p {
 #footer .help::before { content: "\f059"; /* http://fontawesome.io/icon/question/ */ }
 
 #form #upload::before { content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */ }
+#form #gif-picker-button::before { content: "\f03e"; /* https://fontawesome.com/icons/image?style=solid */ }
 #form #submit::before { content: "\f1d8"; /* http://fontawesome.io/icon/paper-plane/ */ }
 
 #chat .msg[data-type="away"] .from::before,
@@ -2263,7 +2265,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: none;
 }
 
+#form #upload-tooltip,
+#form #gif-picker-tooltip,
+#form #submit-tooltip {
+	display: flex;
+}
+
 #form #upload,
+#form #gif-picker-button,
 #form #submit {
 	color: #607992;
 	font-size: 14px;
@@ -2273,6 +2282,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form #upload[disabled],
+#form #gif-picker-button[disabled],
 #form #submit[disabled] {
 	opacity: 0.5;
 }
