@@ -512,11 +512,4 @@ module.exports = {
 		// server window, displayed on the client.
 		raw: false,
 	},
-
-	// ### `giphyApiKey`
-	//
-	// Set the API key for Giphy. If this is not set, the GIF picker will be disabled.
-	//
-	// This value is set to `""` by default.
-	giphyApiKey: "",
 };

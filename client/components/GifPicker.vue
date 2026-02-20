@@ -1,19 +1,32 @@
 <template>
 	<div v-if="isOpen" id="gif-picker" ref="picker">
 		<div class="gif-picker-header">
+			<select v-model="provider" class="gif-provider-selector" @change="onProviderChange">
+				<option value="tenor">Tenor</option>
+				<option value="giphy">Giphy</option>
+			</select>
 			<input
 				ref="searchInput"
 				v-model="query"
 				type="search"
-				placeholder="Search Giphy..."
+				:placeholder="'Search ' + (provider === 'giphy' ? 'Giphy' : 'Tenor') + '...'"
 				@input="onInput"
 			/>
 		</div>
-		<div class="gif-picker-content" @scroll="onScroll">
+		<div class="gif-picker-content">
 			<div v-for="gif in gifs" :key="gif.id" class="gif-item" @click="selectGif(gif)">
-				<img :src="gif.images.fixed_width_small.url" :alt="gif.title" />
+				<img
+					:src="gif.preview"
+					alt="GIF"
+					referrerpolicy="no-referrer"
+					loading="lazy"
+					:title="gif.url"
+				/>
 			</div>
 			<div v-if="loading" class="gif-loading">Loading...</div>
+			<div v-if="!loading && gifs.length === 0 && query" class="gif-loading">
+				No results found.
+			</div>
 		</div>
 	</div>
 </template>
@@ -48,10 +61,26 @@
 .gif-picker-header {
 	padding: 10px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+	display: flex;
+	gap: 5px;
+}
+
+.gif-provider-selector {
+	padding: 5px;
+	border: 1px solid rgba(0, 0, 0, 0.2);
+	border-radius: 3px;
+	background: rgba(0, 0, 0, 0.05);
+	color: var(--body-color);
+	outline: none;
+}
+
+.gif-provider-selector option {
+	background-color: var(--window-bg-color);
+	color: var(--body-color);
 }
 
 .gif-picker-header input {
-	width: 100%;
+	flex: 1;
 	padding: 5px;
 	border: 1px solid rgba(0, 0, 0, 0.2);
 	border-radius: 3px;
@@ -100,78 +129,50 @@
 </style>
 
 <script lang="ts">
-import {defineComponent, ref, onMounted, onUnmounted, computed} from "vue";
+import {defineComponent, ref, onMounted, onUnmounted} from "vue";
 import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
 import socket from "../js/socket";
+import debounce from "lodash/debounce";
 
 export default defineComponent({
 	name: "GifPicker",
 	setup() {
 		const store = useStore();
 		const isOpen = ref(false);
+		const provider = ref("tenor");
 		const query = ref("");
 		const gifs = ref<any[]>([]);
 		const loading = ref(false);
-		const offset = ref(0);
 		const searchInput = ref<HTMLInputElement>();
 		const picker = ref<HTMLElement>();
 
-		const giphyApiKey = computed(() => store.state.serverConfiguration?.giphyApiKey);
-
 		const toggle = () => {
-			if (!giphyApiKey.value) {
-				return;
-			}
-
 			isOpen.value = !isOpen.value;
 
 			if (isOpen.value) {
 				gifs.value = [];
-				offset.value = 0;
 				query.value = "";
-				void fetchGifs();
+				searchGifs();
 				setTimeout(() => searchInput.value?.focus(), 0);
 			}
 		};
 
-		const fetchGifs = async () => {
-			if (loading.value || !giphyApiKey.value) {
-				return;
-			}
-
+		const searchGifs = debounce(() => {
 			loading.value = true;
-			const url = query.value
-				? `https://api.giphy.com/v1/gifs/search?api_key=${
-						giphyApiKey.value
-				  }&q=${encodeURIComponent(query.value)}&limit=20&offset=${offset.value}`
-				: `https://api.giphy.com/v1/gifs/trending?api_key=${giphyApiKey.value}&limit=20&offset=${offset.value}`;
-
-			try {
-				const response = await fetch(url);
-				const data = await response.json();
-				gifs.value = [...gifs.value, ...data.data];
-				offset.value += 20;
-			} catch (e) {
-				// eslint-disable-next-line no-console
-				console.error("Giphy API error", e);
-			} finally {
-				loading.value = false;
-			}
-		};
+			gifs.value = [];
+			socket.emit("gif:search", {
+				query: query.value,
+				provider: provider.value,
+			});
+		}, 500);
 
 		const onInput = () => {
-			gifs.value = [];
-			offset.value = 0;
-			void fetchGifs();
+			searchGifs();
 		};
 
-		const onScroll = (e: Event) => {
-			const target = e.target as HTMLElement;
-
-			if (target.scrollTop + target.clientHeight >= target.scrollHeight - 50) {
-				void fetchGifs();
-			}
+		const onProviderChange = () => {
+			searchGifs();
 		};
 
 		const selectGif = (gif: any) => {
@@ -180,7 +181,7 @@ export default defineComponent({
 			if (activeChannel) {
 				socket.emit("input", {
 					target: activeChannel.channel.id,
-					text: gif.images.original.url,
+					text: gif.url,
 				});
 			}
 
@@ -202,25 +203,33 @@ export default defineComponent({
 			}
 		};
 
+		const onGifResults = (data: {results: any[]}) => {
+			gifs.value = data.results;
+			loading.value = false;
+		};
+
 		onMounted(() => {
 			eventbus.on("gif-picker:toggle", toggle);
 			eventbus.on("escapekey", close);
 			document.addEventListener("mousedown", onOutsideClick);
+			socket.on("gif:results", onGifResults);
 		});
 
 		onUnmounted(() => {
 			eventbus.off("gif-picker:toggle", toggle);
 			eventbus.off("escapekey", close);
 			document.removeEventListener("mousedown", onOutsideClick);
+			socket.off("gif:results", onGifResults);
 		});
 
 		return {
 			isOpen,
+			provider,
 			query,
 			gifs,
 			loading,
 			onInput,
-			onScroll,
+			onProviderChange,
 			selectGif,
 			searchInput,
 			picker,

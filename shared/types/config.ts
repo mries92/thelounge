@@ -16,7 +16,6 @@ type SharedConfigurationBase = {
 	themes: ConfigTheme[];
 	defaultTheme: string;
 	fileUploadMaxFileSize?: number;
-	giphyApiKey?: string;
 };
 
 export type ConfigNetDefaults = {

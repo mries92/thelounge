@@ -1,0 +1,21 @@
+for giphy
+https://giphy.com/search/you-gotta-give - replace spaces in search term with dashes
+look for <a> elements with the class "giphy-gif"
+follow the href which should look like this - https://giphy.com/gifs/wtf-obama-wth-pPhyAv5t9V8djyRFJH
+extract the last portion of the url after the final dash, the pPhyAv5t9V8djyRFJH portion, this is the ID
+can then make a request to the following url for the high quality gif - https://i.giphy.com/pPhyAv5t9V8djyRFJH.webp
+
+
+for tenor
+https://tenor.com/search/yes-monkey-gifs - replace spaces with dashes
+look for all divs with class "Gif"
+inside this div should be a <picture> member, and inside this should be a <img> member with a src attribute in the following format
+    https://media.tenor.com/7iq8qyXvKHsAAAAM/yes-monkey.gif
+    this is the low quality link that should be used for previews in the picker
+extract the values between the slashes to get the id, in this case "7iq8qyXvKHsAAAAM"
+replace the last two characters in the ID with AC to convert to a high quality link
+    so in this case https://media.tenor.com/7iq8qyXvKHsAAAAM/yes-monkey.gif becomes https://media.tenor.com/7iq8qyXvKHsAAAAC/yes-monkey.gif
+    this is the version that should actually be posted to chat
+
+
+Note on tenor, instead of using "AC", you can use "Po" to retrieve the mp4 version, however this does not loop or embed correctly, so the "AC" version should be used

@@ -38,7 +38,6 @@
 			/>
 		</span>
 		<span
-			v-if="store.state.serverConfiguration?.giphyApiKey"
 			id="gif-picker-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
 			aria-label="Search GIFs"

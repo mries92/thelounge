@@ -7,6 +7,8 @@ import {Server as ioServer, Socket as ioSocket} from "socket.io";
 import dns from "dns";
 import colors from "chalk";
 import net from "net";
+import got from "got";
+import * as cheerio from "cheerio";
 
 import log from "./log";
 import Client from "./client";
@@ -371,23 +373,23 @@ function addSecurityHeaders(_req: Request, res: Response, next: NextFunction) {
 		"default-src 'none'", // default to nothing
 		"base-uri 'none'", // disallow <base>, has no fallback to default-src
 		"form-action 'self'", // 'self' to fix saving passwords in Firefox, even though login is handled in javascript
-		"connect-src 'self' ws: wss: https://api.giphy.com", // allow self for polling; websockets; Giphy API
+		"connect-src 'self' ws: wss: https://giphy.com https://tenor.com", // allow self for polling; websockets; Giphy and Tenor for scraping
 		"style-src 'self' https: 'unsafe-inline'", // allow inline due to use in irc hex colors
 		"script-src 'self'", // javascript
 		"worker-src 'self'", // service worker
 		"manifest-src 'self'", // manifest.json
 		"font-src 'self' https:", // allow loading fonts from secure sites (e.g. google fonts)
-		"media-src 'self' https:", // self for notification sound; allow https media (audio previews)
+		"media-src 'self' https: https://*.giphy.com https://*.tenor.com", // allow media from Giphy/Tenor
 	];
 
 	// If prefetch is enabled, but storage is not, we have to allow mixed content
 	// - https://user-images.githubusercontent.com is where we currently push our changelog screenshots
 	// - data: is required for the HTML5 video player
 	if (Config.values.prefetchStorage || !Config.values.prefetch) {
-		policies.push("img-src 'self' data: https://user-images.githubusercontent.com https://*.giphy.com");
+		policies.push("img-src 'self' data: https://user-images.githubusercontent.com https://*.giphy.com https://i.giphy.com https://media.tenor.com");
 		policies.unshift("block-all-mixed-content");
 	} else {
-		policies.push("img-src http: https: data: https://*.giphy.com");
+		policies.push("img-src http: https: data: https://*.giphy.com https://i.giphy.com https://media.tenor.com");
 	}
 
 	res.setHeader("Content-Security-Policy", policies.join("; "));
@@ -589,6 +591,81 @@ function initializeClient(
 		if (_.isPlainObject(data)) {
 			client.names(data);
 		}
+	});
+
+	socket.on("gif:search", async (data) => {
+		if (!_.isPlainObject(data) || typeof data.query !== "string" || typeof data.provider !== "string") {
+			return;
+		}
+
+		const {query, provider} = data;
+		const results: any[] = [];
+
+		try {
+			const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+			
+			if (provider === "giphy") {
+				const searchUrl = query 
+					? `https://giphy.com/search/${encodeURIComponent(query.replace(/\s+/g, "-"))}`
+					: `https://giphy.com/trending`;
+				
+				const response = await got(searchUrl, {
+					headers: { "User-Agent": userAgent }
+				});
+				const $ = cheerio.load(response.body);
+				
+				$("a.giphy-gif").each((i, el) => {
+					const href = $(el).attr("href");
+					if (href) {
+						const parts = href.split("-");
+						const id = parts[parts.length - 1];
+						if (id && !results.some(r => r.id === id)) {
+							results.push({
+								id,
+								preview: `https://i.giphy.com/${id}.webp`,
+								url: `https://i.giphy.com/${id}.webp`
+							});
+						}
+					}
+				});
+			} else if (provider === "tenor") {
+				const searchUrl = query
+					? `https://tenor.com/search/${encodeURIComponent(query.replace(/\s+/g, "-"))}-gifs`
+					: `https://tenor.com/`;
+
+				const response = await got(searchUrl, {
+					headers: {
+						"User-Agent": userAgent,
+						"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+						"Accept-Language": "en-US,en;q=0.9",
+					}
+				});
+				const $ = cheerio.load(response.body);
+
+				$("div.Gif picture img").each((i, el) => {
+					const src = $(el).attr("src");
+					if (src && src.includes("media.tenor.com")) {
+						const parts = src.split("/");
+						const id = parts[parts.length - 2]; // e.g. 7iq8qyXvKHsAAAAM
+						
+						if (id && id.length > 2 && !results.some(r => r.id === id)) {
+							const hqId = id.substring(0, id.length - 2) + "AC";
+							const hqUrl = src.replace(`/${id}/`, `/${hqId}/`);
+
+							results.push({
+								id,
+								preview: src,
+								url: hqUrl
+							});
+						}
+					}
+				});
+			}
+		} catch (e) {
+			log.error(`GIF scraping error for ${provider}: ${e}`);
+		}
+
+		socket.emit("gif:results", {results});
 	});
 
 	socket.on("changelog", () => {
@@ -873,7 +950,6 @@ function getClientConfiguration(): SharedConfiguration | LockedSharedConfigurati
 		useHexIp: Config.values.useHexIp,
 		prefetch: Config.values.prefetch,
 		fileUploadMaxFileSize: Uploader ? Uploader.getMaxFileSize() : undefined, // TODO can't be undefined?
-		giphyApiKey: Config.values.giphyApiKey,
 	};
 
 	const defaultsOverride = {

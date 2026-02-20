@@ -87,6 +87,8 @@ interface ServerToClientEvents {
 
 	"search:results": (response: SearchResponse) => void;
 
+	"gif:results": (data: {results: any[]}) => void;
+
 	quit: EventHandler<{network: string}>;
 
 	error: (error: any) => void;
@@ -172,6 +174,8 @@ interface ClientToServerEvents {
 	"history:clear": EventHandler<{target: number}>;
 
 	search: EventHandler<SearchQuery>;
+
+	"gif:search": EventHandler<{query: string; provider: string}>;
 }
 
 interface InterServerEvents {}
